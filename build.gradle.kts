@@ -1,0 +1,62 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+plugins {
+    id("org.jetbrains.kotlin.jvm")
+    id("org.jetbrains.intellij.platform")
+    id("org.jetbrains.changelog")
+}
+
+// Цель сборки/проверки: idea (IntelliJ IDEA 2026.1) или android (Android Studio 2026.2.1.8).
+// -PintellijPlatformTarget=android
+val platformTarget = providers.gradleProperty("intellijPlatformTarget").orElse("idea")
+
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+
+    intellijPlatform {
+        if (platformTarget.get() == "android") {
+            androidStudio("2026.2.1.8")
+            // The MCP Server plugin is not bundled with Android Studio, it is taken from the Marketplace.
+            plugin("com.intellij.mcpServer", "262.9437.214")
+        } else {
+            // IntelliJ IDEA Community больше не публикуется с 2025.3 (253) — единый дистрибутив IntelliJ IDEA.
+            intellijIdea("2026.1")
+            bundledPlugin("com.intellij.mcpServer")
+        }
+        testFramework(TestFrameworkType.Platform)
+        testBundledPlugin("com.intellij.modules.xml")
+        bundledModule("intellij.libraries.kotlinx.coroutines.core")
+    }
+}
+
+kotlin {
+    compilerOptions {
+        // Android Studio 2026.2 (branch 262) runs on Java 25, IntelliJ IDEA 2026.1 (branch 261) on Java 21.
+        jvmTarget = if (platformTarget.get() == "android") JvmTarget.JVM_25 else JvmTarget.JVM_21
+    }
+}
+
+intellijPlatform {
+    pluginConfiguration {
+        id = "com.yegor.stringmanager"
+        name = "String Manager"
+        version = project.version.toString()
+
+        ideaVersion {
+            sinceBuild = "261"
+            untilBuild = provider { null }
+        }
+
+        vendor {
+            name = "Yegor"
+        }
+    }
+
+    pluginVerification {
+        ides {
+            // Базовые версии проверяются по умолчанию (IDEA 2026.1).
+            recommended()
+        }
+    }
+}

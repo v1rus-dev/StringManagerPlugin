@@ -1,0 +1,24 @@
+<idea-plugin>
+    <id>com.yegor.stringmanager</id>
+    <name>String Manager</name>
+    <vendor>Yegor</vendor>
+
+    <description><![CDATA[
+        Manages all string resources of a project: Android <code>res/values*</code> directories and
+        Compose Multiplatform <code>composeResources/values*</code> directories.
+        Shows a table of keys and locales, highlights missing translations and
+        <code>translatable="false"</code> resources, and allows editing, adding and removing keys.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.xml</depends>
+    <depends optional="true" config-file="stringmanager-mcp.xml">com.intellij.mcpServer</depends>
+
+    <resource-bundle>messages.StringManagerBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="com.yegor.stringmanager.core.StringResourceService"/>
+        <toolWindow id="String Manager" anchor="right" factoryClass="com.yegor.stringmanager.ui.StringManagerToolWindowFactory"/>
+        <postStartupActivity implementation="com.yegor.stringmanager.core.StringManagerStartupActivity"/>
+    </extensions>
+</idea-plugin>
