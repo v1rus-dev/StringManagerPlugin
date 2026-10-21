@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>com.yegor.stringmanager</id>
+    <id>yegor.cheprasov.stringmanager</id>
     <name>String Manager</name>
     <vendor>Yegor</vendor>
 

@@ -39,7 +39,7 @@ kotlin {
 
 intellijPlatform {
     pluginConfiguration {
-        id = "com.yegor.stringmanager"
+        id = "yegor.cheprasov.stringmanager"
         name = "String Manager"
         version = project.version.toString()
         description =

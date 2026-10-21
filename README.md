@@ -1,34 +1,71 @@
 # String Manager Plugin
 
-Плагин для **IntelliJ IDEA** и **Android Studio**, который находит и позволяет управлять **всеми** строковыми
-ресурсами проекта:
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![IntelliJ IDEA](https://img.shields.io/badge/IntelliJ_IDEA-2026.1%2B-000.svg)](https://www.jetbrains.com/idea/)
+[![Android Studio](https://img.shields.io/badge/Android_Studio-2026.1%2B-3DDC84.svg)](https://developer.android.com/studio)
 
-- Android: `<module>/src/*/res/values*/*.xml`;
-- Compose Multiplatform: `<module>/src/<sourceSet>/composeResources/values*/*.xml`.
+Manage **all** string resources of a project in IntelliJ IDEA and Android Studio: Android `res/values*`
+directories and Compose Multiplatform `composeResources/values*` directories.
 
-Имена файлов могут быть любыми (`strings.xml`, `sheet.xml`, файлы, выгруженные из Google-таблиц) — ресурс
-определяется атрибутом `name`, а не именем файла. Имя ресурса в Android и в Compose Multiplatform берётся
-из атрибута `name`, поэтому «лист Google-таблицы → один файл» работает без специальных настроек.
+The plugin does not care about file names — `strings.xml`, `sheet.xml`, or a file exported from a
+spreadsheet are all treated the same way, because a resource is identified by its `name` attribute.
 
----
+## Contents
 
-## Возможности
+- [Features](#features)
+- [Compatibility](#compatibility)
+- [Installation](#installation)
+- [Using the plugin](#using-the-plugin)
+- [MCP tools](#mcp-tools)
+- [Known limitations](#known-limitations)
+- [For developers](#for-developers)
+- [License](#license)
 
-| # | Возможность | Где |
-|---|---|---|
-| 1 | Обнаружение всех файлов со строками во всех модулях | `View | Tool Windows | String Manager` |
-| 2 | Таблица «ключ × локаль» с фильтрами по модулю, файлу и статусу | tool window |
-| 3 | Подсветка пропущенных переводов | tool window |
-| 4 | Флаг `translatable="false"` в виде галочки в конце таблицы, меняется прямо в таблице | tool window |
-| 5 | Непереводимые ключи не считаются пропущенными переводами (нет красной подсветки) | tool window |
-| 6 | Правка значения перевода прямо в ячейке (с undo) | tool window |
-| 7 | Переименование ключа — меняется во **всех** переводах сразу | двойной клик по колонке `Key` |
-| 8 | Добавление ключа с выбором файла | кнопка `Add key...` |
-| 9 | Удаление ключа | кнопка `Remove key` |
-| 10 | Живое обновление при изменении файлов на диске | автоматически |
-| 11 | MCP-инструменты для AI-агентов | MCP-сервер IDE |
+## Features
 
-### Как это выглядит
+- **Discovery** of every strings file in every module of the project.
+- **Table of keys and locales** with filters by module, by file and by status.
+- **Missing translations** are highlighted.
+- **`translatable="false"`** is shown as a check box at the end of the row and can be changed right in
+  the table. Keys that must not be translated are never reported as missing.
+- **Editing** of a translation directly in the table, with undo.
+- **Renaming** of a key — the new name is applied to all translations at once.
+- **Adding and removing** of keys, with a choice of the target file.
+- **Live refresh** when the files change on disk.
+- **Horizontal scrolling** when a project has many locales.
+- **MCP tools** so that AI agents can work with the same resources.
+
+## Compatibility
+
+| IDE | Version |
+|---|---|
+| IntelliJ IDEA | 2026.1 (build 261) or newer |
+| Android Studio | 2026.1 (Quail) or 2026.2 (Rabbit) or newer |
+
+The plugin has no dependency on the Android plugin and works in a plain IntelliJ IDEA.
+
+## Installation
+
+### From a release archive
+
+1. Download `StringManagerPlugin-<version>.zip` from the [releases](https://github.com/yegor/StringManagerPlugin/releases).
+2. Open **Settings | Plugins | ⚙ | Install Plugin from Disk…**, choose the archive, and restart the IDE.
+
+The archive built for IntelliJ IDEA works in Android Studio as well. The archive built for Android Studio
+requires Java 25 and therefore does not load in IntelliJ IDEA 2026.1.
+
+### From sources
+
+```bash
+./gradlew runIde                                        # IntelliJ IDEA 2026.1 with the plugin
+./gradlew runIde -PintellijPlatformTarget=android       # Android Studio 2026.2.1.8 with the plugin
+```
+
+## Using the plugin
+
+Open the tool window **String Manager** — it is available in the right stripe, in
+**View | Tool Windows | String Manager**, and in the main menu **Tools | String Manager** (that menu item also
+brings the tool window back if it was closed by accident).
 
 ```
 ┌────────────┬────────────────────┬────────────────────┬───────────────┐
@@ -36,178 +73,74 @@
 ├────────────┼────────────────────┼────────────────────┼───────────────┤
 │ greeting   │ Hello              │ Привет             │ ☑             │
 │ bye        │ Bye                │                    │ ☑             │
-│ app_name   │ My App             │ (красный фон — нет │ ☐             │
-│            │                    │  перевода)         │               │
+│ app_name   │ My App             │ (red — no          │ ☐             │
+│            │                    │  translation)      │               │
 └────────────┴────────────────────┴────────────────────┴───────────────┘
 ```
 
-- красный фон — ключ есть, но в этой локали перевода нет;
-- жёлтый фон — ресурс помечен `translatable="false"`;
-- колонка `Translatable` — общий флаг ключа во всех переводах: сняли галочку → во всех файлах, где есть
-  ключ, появится `translatable="false"`; поставили → атрибут удалится;
-- у ключа с `translatable="false"` пустые ячейки переводов **не** подсвечиваются красным: переводить его
-  не нужно.
+- **Red** background — the key has no value in this locale.
+- **Yellow** background — the resource is marked as `translatable="false"`.
+- **Translatable** — the flag of the whole key. Unchecking it writes `translatable="false"` into every file
+  that defines the key; checking it again removes the attribute. A key that is not translatable is not
+  highlighted as a missing translation.
 
----
+### Editing
 
-## Требования
-
-- IntelliJ IDEA 2026.1 (build 261) или новее;
-- Android Studio 2026.1 (Quail) / 2026.2 (Rabbit) или новее;
-- JDK 21 (для сборки под IDEA) / JDK 25 (для сборки под Android Studio 2026.2).
-
-Плагин не зависит от Android-плагина и работает в чистой IntelliJ IDEA.
-
----
-
-## Установка
-
-### Из готового архива
-
-1. Скачайте `StringManagerPlugin-<version>.zip`.
-2. **Settings | Plugins | ⚙ | Install Plugin from Disk…** → выберите архив → **Restart**.
-
-Архив, собранный под IntelliJ IDEA (`-idea.zip`), подходит и для Android Studio: он скомпилирован с
-`jvmTarget = 21`, а Android Studio 2026.2 работает на Java 25. Архив, собранный под Android Studio
-(`-android-studio.zip`), требует Java 25 и в IntelliJ IDEA 2026.1 не загрузится.
-
-### Из исходников
-
-```bash
-./gradlew runIde                        # запуск IntelliJ IDEA 2026.1 с плагином
-./gradlew runIde -PintellijPlatformTarget=android   # запуск Android Studio 2026.2.1.8 с плагином
-```
-
----
-
-## Сборка
-
-```bash
-./gradlew test                                   # тесты (40 шт.)
-./gradlew buildPlugin                            # → build/distributions/StringManagerPlugin-<version>.zip
-./gradlew buildPlugin -PintellijPlatformTarget=android
-./gradlew verifyPlugin                           # Plugin Verifier: 261, 262, 263
-./gradlew verifyPluginConfiguration              # проверка требований JetBrains Marketplace
-```
-
----
-
-## MCP-инструменты
-
-Набор инструментов регистрируется через extension point `com.intellij.mcpServer.mcpToolset` и включается,
-если в IDE установлен плагин **MCP Server** (`com.intellij.mcpServer`):
-
-- в IntelliJ IDEA 2026.1 он встроен;
-- в Android Studio его нет из коробки — установите **MCP Server** из Marketplace
-  (`Settings | Plugins | Marketplace`), затем включите сервер в `Settings | Tools | MCP Server`.
-
-| Инструмент | Что делает |
+| Action | How |
 |---|---|
-| `list_string_keys` | все ключи проекта |
-| `list_missing_translations` | ключи и локали без перевода |
-| `list_string_files` | все файлы со строками, их модуль и локаль |
-| `get_string` | значение строки в локали |
-| `set_string` | записать значение (создаёт строку, если её нет) |
-| `add_string` | добавить строку |
-| `remove_string` | удалить строку |
-| `rename_string` | переименовать ключ во всех переводах |
-| `mark_translatable` | поставить/снять `translatable="false"` |
+| Change a translation | Click the cell and type the new value |
+| Rename a key | Edit the `Key` column, confirm the dialog — all translations are renamed at once |
+| Add a key | **Add key…** — choose the file; the file with the most keys of the default locale is offered by default |
+| Remove a key | Select the row and press **Remove key** |
+| Refresh | **Refresh** |
 
----
+Every change is a single undoable action, formatting and comments of the XML file are preserved.
 
-## Архитектура
+### Filters
 
-```
-src/main/kotlin/com/yegor/stringmanager/
-├── core/                       модель, обнаружение, запись — без UI и без MCP
-│   ├── LocaleQualifiers.kt     разбор квалификаторов локалей (values, values-ru, values-ru-rRU, values-b+zh+Hans)
-│   ├── ResourceDiscovery.kt    обход модулей: content roots + source roots
-│   ├── StringResourceWriter.kt чтение и запись через PSI (XmlFile / XmlTag)
-│   ├── StringEscaping.kt       экранирование: Android — да, Compose Multiplatform — нет
-│   ├── StringResourceService.kt единая точка входа для UI и MCP
-│   ├── StringResourceListener.kt  живое обновление по VFS-событиям
-│   └── StringManagerStartupActivity.kt
-├── ui/                         tool window и таблица (UI DSL v2)
-│   ├── StringManagerToolWindowFactory.kt
-│   ├── StringManagerPanel.kt
-│   ├── StringsTableModel.kt
-│   ├── AddStringDialog.kt
-│   └── ShowStringManagerAction.kt   пункт меню Tools | String Manager
-└── mcp/                        MCP-toolset, регистрируется в optional-конфигурации stringmanager-mcp.xml
-```
+The panel above the table filters the rows by module, by file and by status:
 
-Ключевые технические решения:
+- **All** — every key;
+- **Missing translation** — keys that have to be translated but are missing in at least one locale;
+- **Not translatable** — keys marked as `translatable="false"`.
 
-- **обнаружение** — собственный обход модулей (`ModuleManager` + `ModuleRootManager`), без
-  `StudioResourceRepositoryManager` и `AndroidFacet`: Compose Multiplatform-каталоги не являются
-  Android res-корнем, а Android-плагина в IDEA может не быть;
-- **запись** — через PSI внутри `WriteCommandAction`, поэтому работает undo, сохраняются форматирование,
-  комментарии и структура файла; новая строка добавляется так, чтобы не трогать остальные элементы файла;
-- **локали** — `values` (default), `values-ru`, `values-ru-rRU` (регион с префиксом `r`, регистр важен),
-  `values-b+zh+Hans` (BCP 47, дефисы заменены на `+`);
-- **подсветка** — пропуск перевода считается только для переводимых ключей.
+## MCP tools
 
----
+The plugin exposes the same operations as MCP tools, so that AI agents (Claude Code, Codex, Junie, …) can
+work with the resources of the project:
 
-## Что проверено эмпирически
+| Tool | What it does |
+|---|---|
+| `list_string_keys` | All keys of the project |
+| `list_missing_translations` | Keys and the locales without a value |
+| `list_string_files` | All files with strings, with their module and locale |
+| `get_string` | The value of a string in a locale |
+| `set_string` | Writes a value, creates the string when it does not exist |
+| `add_string` | Adds a string to a locale |
+| `remove_string` | Removes a string from a locale |
+| `rename_string` | Renames a key in all its translations |
+| `mark_translatable` | Sets or removes `translatable="false"` |
 
-Результаты запусков — в [`swarm-report/spikes.md`](swarm-report/spikes.md). Коротко:
+The tools work when the **MCP Server** plugin (`com.intellij.mcpServer`) is installed. It is bundled with
+IntelliJ IDEA; in Android Studio install **MCP Server** from the Marketplace and enable the server in
+**Settings | Tools | MCP Server**.
 
-- IntelliJ IDEA Community больше не публикуется с 2025.3 (253) — сборка идёт против `intellijIdea("2026.1")`;
-- в Android Studio 2026.2.1.8 плагина MCP Server нет, в IDEA 2026.1 — есть;
-- генератор Compose Multiplatform **игнорирует** `translatable="false"` (не ошибка, а неизвестный атрибут),
-  поэтому в CMP галочка — это только проявление атрибута в XML;
-- произвольные имена файлов в `values` поддерживаются генератором Compose Multiplatform;
-- запись через PSI сохраняет форматирование, комментарии и минимальный diff.
+## Known limitations
 
----
+- only `<string>` resources are managed; `<plurals>` and `<string-array>` are not shown in the table;
+- no synchronization with Google Sheets and no automatic translation yet.
 
-## Ограничения MVP
+## For developers
 
-- редактируются только `<string>`; `<plurals>` и `<string-array>` не редактируются (их ключи не видны в таблице);
-- синхронизация с Google Sheets и AI-перевод не входят в MVP;
-- MCP-инструменты требуют плагина MCP Server.
-
----
-
-## Публикация в JetBrains Marketplace
-
-Всё необходимое уже настроено в `build.gradle.kts`: id `com.yegor.stringmanager`, версия из `gradle.properties`,
-описание, `sinceBuild = 261` без `untilBuild`, vendor, иконки `pluginIcon.svg` / `pluginIcon_dark.svg` (40×40),
-канал публикации `default`.
-
-### 1. Создать плагин в Marketplace
-
-1. Откройте <https://plugins.jetbrains.com/pluginManager/add> (нужен аккаунт JetBrains Account).
-2. Укажите **Plugin id**: `com.yegor.stringmanager`.
-3. Скопируйте сгенерированный **Token**.
-
-### 2. Опубликовать
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the plugin is built and why;
+- [docs/PUBLISHING.md](docs/PUBLISHING.md) — how to build, verify and publish a release;
+- [swarm-report/spikes.md](swarm-report/spikes.md) — the empirical checks the implementation is based on.
 
 ```bash
-export PUBLISH_TOKEN=<токен из Marketplace>
-./gradlew publishPlugin
+./gradlew test          # 40 tests
+./gradlew buildPlugin   # build/distributions/StringManagerPlugin-<version>.zip
 ```
 
-Токен читается из переменной окружения `PUBLISH_TOKEN` и не попадает в репозиторий.
+## License
 
-### 3. Проверки перед публикацией
-
-```bash
-./gradlew verifyPluginConfiguration   # конфигурация проекта и plugin.xml
-./gradlew verifyPluginStructure       # структура plugin.xml и архива
-./gradlew verifyPlugin                # совместимость с 261, 262, 263
-./gradlew signPlugin                  # подпись Marketplace ZIP Signer (нужен ключ)
-```
-
-### 4. Заполнить страницу в Marketplace
-
-Описание, скриншоты, видео и категорию («Other Tools» / «Localization») задаются в веб-интерфейсе
-Marketplace после первой публикации. Текст для описания и для release notes — в этом README
-и в [CHANGELOG.md](CHANGELOG.md).
-
----
-
-## Лицензия
-
-Apache License 2.0 — см. [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE).
