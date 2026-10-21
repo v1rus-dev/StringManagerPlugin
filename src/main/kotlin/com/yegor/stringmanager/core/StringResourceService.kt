@@ -143,7 +143,7 @@ class StringResourceService(
     /** Sets the value of a string in the given file. */
     fun setValue(file: VirtualFile, key: String, value: String, origin: ResourceOrigin) {
         writer.setValue(file, key, value, origin)
-        refresh()
+        refreshAsync()
     }
 
     /** Adds a new string to the given file. */
@@ -155,19 +155,19 @@ class StringResourceService(
         translatable: Boolean = true,
     ) {
         writer.addString(file, key, value, origin, translatable)
-        refresh()
+        refreshAsync()
     }
 
     /** Removes a string from the given file. */
     fun removeString(file: VirtualFile, key: String) {
         writer.removeString(file, key)
-        refresh()
+        refreshAsync()
     }
 
     /** Marks a string as translatable or not. */
     fun setTranslatable(file: VirtualFile, key: String, translatable: Boolean) {
         writer.setTranslatable(file, key, translatable)
-        refresh()
+        refreshAsync()
     }
 
     /**
@@ -176,16 +176,33 @@ class StringResourceService(
     fun renameKey(key: String, newKey: String) {
         val files = filesOf(key).mapNotNull { fileOf(it.path) }
         writer.renameKey(files, key, newKey)
-        refresh()
+        refreshAsync()
     }
 
     /**
-     * Marks a key as translatable or not in all files where it is defined.
+     * Marks a key as translatable or not.
+     *
+     * The attribute is written into the files of the default locale only, because Android and
+     * Compose Multiplatform inherit the flag from the default locale into the translations.
+     * Removing the flag touches only the files that already have it.
      */
     fun setTranslatable(key: String, translatable: Boolean) {
-        val files = filesOf(key).mapNotNull { fileOf(it.path) }
+        val files = filesForTranslatable(key, translatable).mapNotNull { fileOf(it.path) }
         writer.setTranslatable(files, key, translatable)
-        refresh()
+        refreshAsync()
+    }
+
+    /**
+     * Returns the files that have to be changed to set or to remove the flag of a key.
+     */
+    private fun filesForTranslatable(key: String, translatable: Boolean): List<StringFile> {
+        val entries = snapshot.entries[key].orEmpty()
+        if (translatable) {
+            // Only the files that already have the attribute are touched.
+            return entries.filter { !it.translatable }.map { it.file }.distinctBy { it.path }
+        }
+        val defaults = entries.filter { it.file.locale.isDefault }.map { it.file }.distinctBy { it.path }
+        return if (defaults.isNotEmpty()) defaults else entries.map { it.file }.distinctBy { it.path }
     }
 
     /** Renames a key, the write happens on the EDT. */

@@ -83,6 +83,28 @@ part: the check box renderer and editor for the `Translatable` column, and the h
 The table uses `AUTO_RESIZE_OFF` and computes the width of every column from its content, so that a project
 with many locales is scrolled horizontally instead of squeezing the locales.
 
+The column with the keys does not move with the horizontal scroll: it is shown in the row header of the
+scroll pane (`JScrollPane.setRowHeaderView`), and the two tables share the model and the selected row.
+
+## The `translatable` flag
+
+The flag belongs to the key, not to a locale:
+
+- the attribute is written into the file of the **default locale** only, because Android and Compose
+  Multiplatform inherit the flag from the default locale into the translations;
+- removing the flag touches only the files that already have the attribute;
+- a key is treated as not translatable when at least one of its resources has the attribute, and such a key
+  is never reported as a missing translation.
+
+## Reactivity
+
+Every write is followed by a background rescan (`refreshAsync`), so the EDT is never blocked by a scan of
+all files. The flag of a key is shown immediately (`StringsTableModel.overrideTranslatable`), the rescan
+confirms it later.
+
+The `translatable` attribute of a key is written into one file only, which keeps the operation fast: a key
+that exists in a hundred locales is changed in one file instead of a hundred.
+
 ## MCP
 
 The toolset implements `com.intellij.mcpserver.McpToolset` and is registered in

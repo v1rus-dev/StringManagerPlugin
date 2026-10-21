@@ -36,6 +36,7 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
     private var moduleFilter: String? = null
     private var fileFilter: String? = null
     private var statusFilter: StatusFilter = StatusFilter.ALL
+    private val translatableOverrides = mutableMapOf<String, Boolean>()
 
     /** Locales of the project, they are the columns of the table. */
     val locales: List<String> get() = currentLocales
@@ -46,7 +47,20 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
     /** Replaces the data of the table. */
     fun setSnapshot(snapshot: StringSnapshot) {
         this.snapshot = snapshot
+        translatableOverrides.clear()
         applyFilters()
+    }
+
+    /**
+     * Shows the new value of the flag of a key immediately, before the files are rescanned.
+     */
+    fun overrideTranslatable(key: String, translatable: Boolean) {
+        translatableOverrides[key] = translatable
+        for (row in 0 until rowCount) {
+            if (currentKeys.getOrNull(row) == key) {
+                fireTableRowsUpdated(row, row)
+            }
+        }
     }
 
     /** Sets the module the table is limited to, `null` means all modules. */
@@ -101,6 +115,7 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
      * is marked as `translatable="false"`.
      */
     fun isTranslatable(key: String): Boolean {
+        translatableOverrides[key]?.let { return it }
         val entries = snapshot.entries[key].orEmpty()
         return entries.isNotEmpty() && entries.all { it.translatable }
     }

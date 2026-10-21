@@ -32,7 +32,7 @@ spreadsheet are all treated the same way, because a resource is identified by it
 - **Renaming** of a key — the new name is applied to all translations at once.
 - **Adding and removing** of keys, with a choice of the target file.
 - **Live refresh** when the files change on disk.
-- **Horizontal scrolling** when a project has many locales.
+- **Horizontal scrolling** when a project has many locales; the column with the keys stays in place.
 - **MCP tools** so that AI agents can work with the same resources.
 
 ## Compatibility
@@ -80,9 +80,9 @@ brings the tool window back if it was closed by accident).
 
 - **Red** background — the key has no value in this locale.
 - **Yellow** background — the resource is marked as `translatable="false"`.
-- **Translatable** — the flag of the whole key. Unchecking it writes `translatable="false"` into every file
-  that defines the key; checking it again removes the attribute. A key that is not translatable is not
-  highlighted as a missing translation.
+- **Translatable** — the flag of the whole key. Unchecking it writes `translatable="false"` into the file of
+  the default locale, the translations inherit it from there; checking it again removes the attribute.
+  A key that is not translatable is not highlighted as a missing translation.
 
 ### Editing
 

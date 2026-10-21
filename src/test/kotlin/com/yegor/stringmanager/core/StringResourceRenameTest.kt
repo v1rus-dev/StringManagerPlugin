@@ -64,6 +64,7 @@ class StringResourceRenameTest : BasePlatformTestCase() {
         val service = StringResourceService.getInstance(project)
         service.refresh()
         service.renameKey("greeting", "hello")
+        service.refresh()
         val snapshot = service.snapshot()
         assertTrue(snapshot.entries.containsKey("hello"))
         assertFalse(snapshot.entries.containsKey("greeting"))
@@ -72,20 +73,23 @@ class StringResourceRenameTest : BasePlatformTestCase() {
     }
 
     fun testServiceMarksKeyAsNotTranslatable() {
-        myFixture.addFileToProject(
+        val default = myFixture.addFileToProject(
             "app/src/main/res/values/strings.xml",
             "<resources><string name=\"greeting\">Hello</string></resources>",
         )
-        myFixture.addFileToProject(
+        val russian = myFixture.addFileToProject(
             "app/src/main/res/values-ru/strings.xml",
             "<resources><string name=\"greeting\">Привет</string></resources>",
         )
         val service = StringResourceService.getInstance(project)
         service.refresh()
         service.setTranslatable("greeting", false)
+        service.refresh()
         val snapshot = service.snapshot()
+        // The flag is written into the default locale, the translations inherit it.
         assertFalse(snapshot.entriesOf("greeting", "default").single().translatable)
-        assertFalse(snapshot.entriesOf("greeting", "ru").single().translatable)
+        assertTrue(default.text.contains("translatable=\"false\""))
+        assertFalse(russian.text.contains("translatable"))
     }
 
     fun testKeepsOriginOfFile() {

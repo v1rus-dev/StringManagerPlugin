@@ -16,6 +16,7 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import javax.swing.DefaultComboBoxModel
+import javax.swing.JScrollPane
 import javax.swing.JButton
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
@@ -35,6 +36,8 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
         StringManagerBundle.message("column.translatable"),
     )
     private val table = JBTable(model)
+    private val keyTable = JBTable(model)
+    private val scroll = JBScrollPane(table)
     private val modules = JComboBox<String>()
     private val files = JComboBox<String>()
     private val statuses = JComboBox<String>()
@@ -43,7 +46,15 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
     /** The table of the panel, it is exposed for the tests. */
     internal val stringsTable: JBTable get() = table
 
+    /** The table with the keys, it is shown in the row header of the scroll pane. */
+    internal val keysTable: JBTable get() = keyTable
+
+    /** The scroll pane of the table, it is exposed for the tests. */
+    internal val stringsScroll: JBScrollPane get() = scroll
+
     init {
+        hideKeyColumn()
+        hideExtraKeyColumns()
         model.onEdit = { key, locale, value -> edit(key, locale, value) }
         model.onRename = { oldKey, newKey -> rename(oldKey, newKey) }
         model.onTranslatable = { key, translatable -> changeTranslatable(key, translatable) }
@@ -61,7 +72,7 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
             ),
         )
         add(filters(), BorderLayout.NORTH)
-        add(JBScrollPane(table), BorderLayout.CENTER)
+        add(scrollPane(), BorderLayout.CENTER)
         add(buttons(), BorderLayout.SOUTH)
         modules.addActionListener { applyFilters() }
         files.addActionListener { applyFilters() }
@@ -73,6 +84,51 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
 
     override fun dispose() {
         service.removeListener(listener)
+    }
+
+    /**
+     * The table of the locales is scrolled horizontally, while the column with the keys stays
+     * in place: the keys are shown in the row header of the scroll pane.
+     */
+    private fun scrollPane(): JScrollPane {
+        scroll.setRowHeaderView(keyTable)
+        syncSelection(table, keyTable)
+        syncSelection(keyTable, table)
+        return scroll
+    }
+
+    /**
+     * Leaves only the column with the keys in the table of the row header.
+     */
+    private fun hideExtraKeyColumns() {
+        val columns = keyTable.columnModel
+        while (columns.columnCount > 1) {
+            columns.removeColumn(columns.getColumn(columns.columnCount - 1))
+        }
+    }
+
+    /**
+     * Hides the column with the keys in the table of the locales, it is shown in the row header.
+     */
+    private fun hideKeyColumn() {
+        val columns = table.columnModel
+        if (columns.columnCount == model.columnCount && columns.getColumn(0).modelIndex == 0) {
+            columns.removeColumn(columns.getColumn(0))
+        }
+    }
+
+    /**
+     * Selects the same row in both tables.
+     */
+    private fun syncSelection(source: JBTable, target: JBTable) {
+        source.selectionModel.addListSelectionListener { event ->
+            if (!event.valueIsAdjusting) {
+                val row = source.selectedRow
+                if (row >= 0 && target.selectedRow != row) {
+                    target.setRowSelectionInterval(row, row)
+                }
+            }
+        }
     }
 
     private fun filters(): JPanel {
@@ -112,14 +168,18 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
     private fun update(snapshot: StringSnapshot) {
         refreshFilters(snapshot)
         model.setSnapshot(snapshot)
+        hideKeyColumn()
+        hideExtraKeyColumns()
         updateColumnWidths()
         table.repaint()
+        keyTable.repaint()
     }
 
     private fun updateColumnWidths() {
         for (column in 0 until table.columnCount) {
             table.columnModel.getColumn(column).preferredWidth = model.columnWidth(column)
         }
+        keyTable.columnModel.getColumn(0).preferredWidth = model.columnWidth(0)
     }
 
     private fun refreshFilters(snapshot: StringSnapshot) {
@@ -192,6 +252,8 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
      * Marks a key as translatable or not in all its translations.
      */
     private fun changeTranslatable(key: String, translatable: Boolean) {
+        // The flag is shown immediately, the files are rescanned in the background.
+        model.overrideTranslatable(key, translatable)
         service.setTranslatable(key, translatable)
     }
 
