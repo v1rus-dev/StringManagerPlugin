@@ -39,7 +39,7 @@ kotlin {
 
 intellijPlatform {
     pluginConfiguration {
-        id = "yegor.cheprasov.stringmanager"
+        id = "io.github.v1rus-dev.stringmanager"
         name = "String Manager"
         version = project.version.toString()
         description =
@@ -55,7 +55,7 @@ intellijPlatform {
 
         vendor {
             name = "Yegor"
-            url = "https://github.com/yegor/StringManagerPlugin"
+            url = "https://github.com/v1rus-dev/StringManagerPlugin"
             email = "YegorCheprasov@gmail.com"
         }
     }

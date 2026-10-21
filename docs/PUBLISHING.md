@@ -6,8 +6,8 @@ How to build, verify and publish a release of the String Manager plugin.
 
 | | |
 |---|---|
-| Plugin id | `yegor.cheprasov.stringmanager` |
-| Marketplace page | <https://plugins.jetbrains.com/plugin/yegor.cheprasov.stringmanager> |
+| Plugin id | `io.github.v1rus-dev.stringmanager` |
+| Marketplace page | <https://plugins.jetbrains.com/plugin/io.github.v1rus-dev.stringmanager> |
 | Group (artifact coordinates) | `com.yegor.stringmanager` in `gradle.properties` |
 | Packages | `com.yegor.stringmanager.*` |
 
@@ -52,7 +52,7 @@ Open **Marketplace → My Plugins → Create new plugin** and fill in the vendor
 
 In the same wizard, step **Plugin Details**:
 
-- **Plugin ID** — `yegor.cheprasov.stringmanager` (must match `plugin.xml`);
+- **Plugin ID** — `io.github.v1rus-dev.stringmanager` (must match `plugin.xml`);
 - **Name** — `String Manager`;
 - **Description**, **Category**, **License URL** and the tags.
 
