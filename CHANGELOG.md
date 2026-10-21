@@ -8,6 +8,13 @@
 
 - Nothing yet
 
+## [0.2.1] - 2026-10-21
+
+### Fixed
+
+- The plugin no longer uses the deprecated and the experimental APIs of the platform, so the JetBrains
+  Marketplace shows no warnings about them anymore
+
 ## [0.2.0] - 2026-10-21
 
 ### Added

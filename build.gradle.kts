@@ -1,4 +1,5 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -37,6 +38,11 @@ kotlin {
     compilerOptions {
         // Android Studio 2026.2 (branch 262) runs on Java 25, IntelliJ IDEA 2026.1 (branch 261) on Java 21.
         jvmTarget = if (platformTarget.get() == "android") JvmTarget.JVM_25 else JvmTarget.JVM_21
+        // Kotlin must not generate delegating implementations for the default methods of the
+        // Kotlin interfaces of the platform (ToolWindowFactory and others): such stubs call the
+        // deprecated and experimental platform methods directly and the plugin verifier reports
+        // them as usages of the deprecated API.
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }
 }
 
