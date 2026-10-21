@@ -4,6 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
@@ -15,15 +16,20 @@ import com.yegor.stringmanager.core.model.StringFile
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Dimension
 import javax.swing.DefaultComboBoxModel
-import javax.swing.JScrollPane
 import javax.swing.JButton
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JScrollPane
 import javax.swing.JTable
+import javax.swing.ScrollPaneConstants
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.table.DefaultTableCellRenderer
+import javax.swing.table.TableColumn
 
 /**
  * Content of the `String Manager` tool window: a table of keys and locales with filters.
@@ -41,6 +47,7 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
     private val modules = JComboBox<String>()
     private val files = JComboBox<String>()
     private val statuses = JComboBox<String>()
+    private val search = SearchTextField()
     private val listener: (StringSnapshot) -> Unit = { snapshot -> update(snapshot) }
 
     /** The table of the panel, it is exposed for the tests. */
@@ -52,18 +59,25 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
     /** The scroll pane of the table, it is exposed for the tests. */
     internal val stringsScroll: JBScrollPane get() = scroll
 
+    /** The field of the search, it is exposed for the tests. */
+    internal val searchField: SearchTextField get() = search
+
     init {
-        hideKeyColumn()
-        hideExtraKeyColumns()
+        // The columns are built by the panel, the model must not recreate them, otherwise the
+        // column with the keys would come back to the table of the locales.
+        table.setAutoCreateColumnsFromModel(false)
+        keyTable.setAutoCreateColumnsFromModel(false)
         model.onEdit = { key, locale, value -> edit(key, locale, value) }
         model.onRename = { oldKey, newKey -> rename(oldKey, newKey) }
         model.onTranslatable = { key, translatable -> changeTranslatable(key, translatable) }
         table.setDefaultRenderer(String::class.java, CellRenderer())
         table.setDefaultRenderer(Boolean::class.java, BooleanRenderer())
         table.setDefaultEditor(Boolean::class.java, BooleanEditor())
-        table.rowHeight = 22
+        table.rowHeight = ROW_HEIGHT
         // The columns keep their width, so that a project with many locales is scrolled horizontally.
         table.autoResizeMode = JTable.AUTO_RESIZE_OFF
+        keyTable.rowHeight = ROW_HEIGHT
+        keyTable.autoResizeMode = JTable.AUTO_RESIZE_OFF
         statuses.model = DefaultComboBoxModel(
             arrayOf(
                 StringManagerBundle.message("filter.all"),
@@ -71,12 +85,14 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
                 StringManagerBundle.message("status.nonTranslatable"),
             ),
         )
+        rebuildColumns()
         add(filters(), BorderLayout.NORTH)
         add(scrollPane(), BorderLayout.CENTER)
         add(buttons(), BorderLayout.SOUTH)
         modules.addActionListener { applyFilters() }
         files.addActionListener { applyFilters() }
         statuses.addActionListener { applyFilters() }
+        search.addDocumentListener(SearchListener())
         service.addListener(listener)
         update(service.snapshot())
         service.refreshAsync()
@@ -92,29 +108,35 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
      */
     private fun scrollPane(): JScrollPane {
         scroll.setRowHeaderView(keyTable)
+        scroll.setCorner(ScrollPaneConstants.UPPER_LEFT_CORNER, keyTable.tableHeader)
         syncSelection(table, keyTable)
         syncSelection(keyTable, table)
         return scroll
     }
 
     /**
-     * Leaves only the column with the keys in the table of the row header.
+     * Builds the columns of both tables.
+     *
+     * The column with the keys is not in the table of the locales, it is shown in the row header
+     * of the scroll pane, so that it does not move when the locales are scrolled horizontally.
      */
-    private fun hideExtraKeyColumns() {
-        val columns = keyTable.columnModel
-        while (columns.columnCount > 1) {
-            columns.removeColumn(columns.getColumn(columns.columnCount - 1))
+    private fun rebuildColumns() {
+        val locales = table.columnModel
+        while (locales.columnCount > 0) {
+            locales.removeColumn(locales.getColumn(locales.columnCount - 1))
         }
-    }
-
-    /**
-     * Hides the column with the keys in the table of the locales, it is shown in the row header.
-     */
-    private fun hideKeyColumn() {
-        val columns = table.columnModel
-        if (columns.columnCount == model.columnCount && columns.getColumn(0).modelIndex == 0) {
-            columns.removeColumn(columns.getColumn(0))
+        for (index in 1 until model.columnCount) {
+            val column = TableColumn(index)
+            column.headerValue = model.getColumnName(index)
+            locales.addColumn(column)
         }
+        val keys = keyTable.columnModel
+        while (keys.columnCount > 0) {
+            keys.removeColumn(keys.getColumn(keys.columnCount - 1))
+        }
+        val key = TableColumn(0)
+        key.headerValue = model.getColumnName(0)
+        keys.addColumn(key)
     }
 
     /**
@@ -131,6 +153,12 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
         }
     }
 
+    /**
+     * Index of the column of the table of the locales in the model, the column with the keys
+     * is not there, it is in the row header.
+     */
+    private fun modelColumn(view: Int): Int = table.columnModel.getColumn(view).modelIndex
+
     private fun filters(): JPanel {
         val component = panel {
             row {
@@ -140,6 +168,10 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
                 cell(files)
                 label(StringManagerBundle.message("filter.status"))
                 cell(statuses)
+            }
+            row {
+                label(StringManagerBundle.message("filter.search"))
+                cell(search)
             }
         }
         return component
@@ -168,18 +200,23 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
     private fun update(snapshot: StringSnapshot) {
         refreshFilters(snapshot)
         model.setSnapshot(snapshot)
-        hideKeyColumn()
-        hideExtraKeyColumns()
+        rebuildColumns()
         updateColumnWidths()
         table.repaint()
         keyTable.repaint()
     }
 
     private fun updateColumnWidths() {
-        for (column in 0 until table.columnCount) {
-            table.columnModel.getColumn(column).preferredWidth = model.columnWidth(column)
+        for (view in 0 until table.columnCount) {
+            val column = table.columnModel.getColumn(view)
+            column.preferredWidth = model.columnWidth(column.modelIndex)
         }
-        keyTable.columnModel.getColumn(0).preferredWidth = model.columnWidth(0)
+        val width = model.columnWidth(0)
+        keyTable.columnModel.getColumn(0).preferredWidth = width
+        // The row header takes the width of the column with the keys. Without it, the row header
+        // takes the whole width of the panel and squeezes the locales.
+        scroll.rowHeader.preferredSize = Dimension(width, scroll.rowHeader.preferredSize.height)
+        scroll.revalidate()
     }
 
     private fun refreshFilters(snapshot: StringSnapshot) {
@@ -209,10 +246,20 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
             },
         )
         table.repaint()
+        keyTable.repaint()
+    }
+
+    /**
+     * Shows only the rows whose key or whose translation contains the text of the search field.
+     */
+    private fun applySearch() {
+        model.setSearchQuery(search.text)
+        table.repaint()
+        keyTable.repaint()
     }
 
     private fun edit(key: String, locale: String, value: String) {
-        val entry = model.entryAt(table.selectedRow, table.selectedColumn)
+        val entry = model.entryAt(table.selectedRow, modelColumn(table.selectedColumn))
         if (entry != null) {
             val file = service.fileOf(entry.file.path) ?: return
             service.setValue(file, key, value, entry.file.origin)
@@ -277,9 +324,9 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
     }
 
     private fun removeKey() {
-        val key = model.selectedKey() ?: return
+        val key = model.keyAt(table.selectedRow) ?: return
         val snapshot = service.snapshot()
-        val locale = model.localeAt(table.selectedColumn)
+        val locale = model.localeAt(modelColumn(table.selectedColumn))
         val entries = snapshot.entries[key].orEmpty()
         val target = entries.firstOrNull { locale == null || it.file.locale.displayName == locale }?.file
             ?: entries.firstOrNull()?.file
@@ -317,17 +364,19 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
             column: Int,
         ): Component {
             val component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column) as JLabel
-            if (column == 0) {
+            val index = modelColumn(column)
+            if (index == model.translatableColumn()) {
+                // The flag of the key is not a translation, it is not highlighted.
                 component.background = table?.background
                 return component
             }
             val key = model.keyAt(row)
-            val entry: StringEntry? = model.entryAt(row, column)
+            val entry: StringEntry? = model.entryAt(row, index)
             component.background = when {
                 // A key that must not be translated is not a missing translation.
                 entry == null && key != null && !model.isTranslatable(key) -> table?.background
                 entry == null -> MISSING_COLOR
-                !entry.translatable -> NON_TRANSLATABLE_COLOR
+                key != null && !model.isTranslatable(key) -> NON_TRANSLATABLE_COLOR
                 else -> table?.background
             }
             return component
@@ -364,7 +413,17 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
         override fun getCellEditorValue(): Any = (editorComponent as JCheckBox).isSelected
     }
 
+    /**
+     * Searches the rows by the keys and by the translations, while the user types.
+     */
+    private inner class SearchListener : DocumentListener {
+        override fun insertUpdate(event: DocumentEvent) = applySearch()
+        override fun removeUpdate(event: DocumentEvent) = applySearch()
+        override fun changedUpdate(event: DocumentEvent) = applySearch()
+    }
+
     companion object {
+        private const val ROW_HEIGHT = 22
         private val MISSING_COLOR = JBColor(Color(0xF7D6D6), Color(0x5C2B2B))
         private val NON_TRANSLATABLE_COLOR = JBColor(Color(0xFFF3C4), Color(0x4A421A))
     }

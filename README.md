@@ -25,6 +25,7 @@ spreadsheet are all treated the same way, because a resource is identified by it
 
 - **Discovery** of every strings file in every module of the project.
 - **Table of keys and locales** with filters by module, by file and by status.
+- **Search** by keys and by translations at the same time, the case is ignored.
 - **Missing translations** are highlighted.
 - **`translatable="false"`** is shown as a check box at the end of the row and can be changed right in
   the table. Keys that must not be translated are never reported as missing.
@@ -104,6 +105,10 @@ The panel above the table filters the rows by module, by file and by status:
 - **Missing translation** — keys that have to be translated but are missing in at least one locale;
 - **Not translatable** — keys marked as `translatable="false"`.
 
+The **Search** field filters the rows while you type: a row is shown when its key or any of its
+translations contains the text, the case is ignored. Only the translations of the visible files are
+searched, so the search respects the filters by module and by file.
+
 ## MCP tools
 
 The plugin exposes the same operations as MCP tools, so that AI agents (Claude Code, Codex, Junie, …) can
@@ -137,7 +142,7 @@ IntelliJ IDEA; in Android Studio install **MCP Server** from the Marketplace and
 - [swarm-report/spikes.md](swarm-report/spikes.md) — the empirical checks the implementation is based on.
 
 ```bash
-./gradlew test          # 40 tests
+./gradlew test          # 48 tests
 ./gradlew buildPlugin   # build/distributions/StringManagerPlugin-<version>.zip
 ```
 

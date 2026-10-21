@@ -6,7 +6,9 @@
 
 ### Added
 
-- Nothing yet
+- Search by keys and by translations at the same time, the case is ignored
+- The column with the keys stays in place when the locales are scrolled horizontally
+- The changes of the `translatable` flag are shown right away, without waiting for a refresh
 
 ## [0.1.0] - 2026-10-21
 

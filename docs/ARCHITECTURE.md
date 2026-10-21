@@ -86,6 +86,17 @@ with many locales is scrolled horizontally instead of squeezing the locales.
 The column with the keys does not move with the horizontal scroll: it is shown in the row header of the
 scroll pane (`JScrollPane.setRowHeaderView`), and the two tables share the model and the selected row.
 
+Two details of that arrangement are worth knowing:
+
+- the columns of both tables are built by the panel (`setAutoCreateColumnsFromModel(false)`), because the
+  model recreates the columns on every structure change and the column with the keys would come back to
+  the table of the locales;
+- the row header gets its width explicitly (`JViewport.setPreferredSize`), otherwise it takes the whole
+  width of the panel and squeezes the locales.
+
+The rows are filtered by the module, by the file, by the status and by the search query. The search
+looks into the keys and into the translations at the same time and ignores the case.
+
 ## The `translatable` flag
 
 The flag belongs to the key, not to a locale:
@@ -119,7 +130,7 @@ the MCP Server plugin.
 
 ## Tests
 
-40 tests, all of them run against a real IDE instance:
+48 tests, all of them run against a real IDE instance:
 
 - `LocaleQualifiersTest` — the qualifiers;
 - `ResourceDiscoveryTest` — what is found in a module;
@@ -127,8 +138,8 @@ the MCP Server plugin.
 - `StringResourceWriterTest` — writing with a check of the whole text of the file (this is the diff check);
 - `StringResourceRenameTest` — renaming and the translatable flag;
 - `StringResourceServiceTest` — the snapshot, missing translations and the warnings;
-- `StringsTableModelTest` — filters, columns and the translatable flag;
-- `StringManagerPanelTest` — the horizontal scrolling of the table;
+- `StringsTableModelTest` — filters, search, columns and the translatable flag;
+- `StringManagerPanelTest` — the horizontal scrolling of the table, the frozen column and the search;
 - `ToolWindowIconTest` — the icons of the tool window.
 
 ## Empirical checks

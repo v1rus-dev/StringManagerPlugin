@@ -36,6 +36,7 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
     private var moduleFilter: String? = null
     private var fileFilter: String? = null
     private var statusFilter: StatusFilter = StatusFilter.ALL
+    private var searchQuery: String = ""
     private val translatableOverrides = mutableMapOf<String, Boolean>()
 
     /** Locales of the project, they are the columns of the table. */
@@ -43,6 +44,9 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
 
     /** Keys of the table, they are the rows. */
     val keys: List<String> get() = currentKeys
+
+    /** The text the rows are searched by, it is empty when nothing is searched. */
+    val search: String get() = searchQuery
 
     /** Replaces the data of the table. */
     fun setSnapshot(snapshot: StringSnapshot) {
@@ -81,6 +85,22 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
         applyFilters()
     }
 
+    /**
+     * Sets the text the rows are searched by.
+     *
+     * A row is shown when its key or any of its translations contains the text, the case is
+     * ignored. Only the translations of the visible files are searched, so that the search
+     * respects the filters by module and by file.
+     */
+    fun setSearchQuery(query: String) {
+        val trimmed = query.trim()
+        if (trimmed == searchQuery) {
+            return
+        }
+        searchQuery = trimmed
+        applyFilters()
+    }
+
     /** Returns the entry of a cell, `null` when the cell has no translation. */
     fun entryAt(row: Int, column: Int): StringEntry? {
         if (column == 0 || column > currentLocales.size || row >= currentKeys.size) {
@@ -98,15 +118,6 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
 
     /** Returns all files of the snapshot. */
     fun files(): List<StringFile> = snapshot.files
-
-    /** Returns the key of the selected cell. */
-    fun selectedKey(): String? {
-        val row = selectedRow
-        return if (row >= 0) keyAt(row) else null
-    }
-
-    /** Row of the selected cell. */
-    var selectedRow: Int = -1
 
     /**
      * Returns `true` when the key has to be translated.
@@ -182,7 +193,10 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
         return entryAt(rowIndex, columnIndex)?.value.orEmpty()
     }
 
-    private fun translatableColumn(): Int = currentLocales.size + 1
+    /**
+     * Index of the column with the `translatable` flag, it is the last column of the table.
+     */
+    fun translatableColumn(): Int = currentLocales.size + 1
 
     private fun applyFilters() {
         val files = snapshot.files.filter { file ->
@@ -194,15 +208,35 @@ class StringsTableModel(private val keyColumnName: String = "Key", private val t
         currentLocales = snapshot.locales
         currentKeys = allKeys.filter { key ->
             val entries = snapshot.entries[key].orEmpty().filter { it.file.path in visible }
-            when (statusFilter) {
-                StatusFilter.ALL -> entries.isNotEmpty()
-                // A key is missing when it has to be translated and at least one locale has no value.
-                StatusFilter.MISSING -> isTranslatable(key) &&
-                    snapshot.locales.any { locale -> snapshot.entriesOf(key, locale).isEmpty() }
-                StatusFilter.NON_TRANSLATABLE -> entries.any { !it.translatable }
-            }
+            matchesStatus(key, entries) && matchesSearch(key, entries)
         }
         fireTableStructureChanged()
+    }
+
+    /**
+     * Checks the status filter of a key.
+     */
+    private fun matchesStatus(key: String, entries: List<StringEntry>): Boolean = when (statusFilter) {
+        StatusFilter.ALL -> entries.isNotEmpty()
+        // A key is missing when it has to be translated and at least one locale has no value.
+        StatusFilter.MISSING -> isTranslatable(key) &&
+            snapshot.locales.any { locale -> snapshot.entriesOf(key, locale).isEmpty() }
+        StatusFilter.NON_TRANSLATABLE -> entries.any { !it.translatable }
+    }
+
+    /**
+     * Checks the search query of a key: either the key itself or one of its translations
+     * has to contain the query, the case is ignored.
+     */
+    private fun matchesSearch(key: String, entries: List<StringEntry>): Boolean {
+        if (searchQuery.isEmpty()) {
+            return true
+        }
+        val needle = searchQuery.lowercase()
+        if (key.lowercase().contains(needle)) {
+            return true
+        }
+        return entries.any { it.value.lowercase().contains(needle) }
     }
 
     companion object {

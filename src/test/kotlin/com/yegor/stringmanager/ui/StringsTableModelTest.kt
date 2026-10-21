@@ -139,4 +139,55 @@ class StringsTableModelTest : BasePlatformTestCase() {
         assertTrue(model.columnWidth(1) >= 120)
         assertTrue(model.columnWidth(1) <= 400)
     }
+
+    fun testSearchesByKey() {
+        myFixture.addFileToProject(
+            "app/src/main/res/values/strings.xml",
+            "<resources><string name=\"greeting\">Hello</string><string name=\"bye\">Bye</string></resources>",
+        )
+        val service = StringResourceService.getInstance(project)
+        service.refresh()
+        val model = StringsTableModel()
+        model.setSnapshot(service.snapshot())
+        model.setSearchQuery("gre")
+        assertEquals(listOf("greeting"), model.keys)
+        model.setSearchQuery("GRE")
+        assertEquals(listOf("greeting"), model.keys)
+        model.setSearchQuery("")
+        assertEquals(listOf("bye", "greeting"), model.keys)
+    }
+
+    fun testSearchesByTranslation() {
+        myFixture.addFileToProject(
+            "app/src/main/res/values/strings.xml",
+            "<resources><string name=\"greeting\">Hello</string><string name=\"bye\">Bye</string></resources>",
+        )
+        myFixture.addFileToProject(
+            "app/src/main/res/values-ru/strings.xml",
+            "<resources><string name=\"greeting\">Привет</string></resources>",
+        )
+        val service = StringResourceService.getInstance(project)
+        service.refresh()
+        val model = StringsTableModel()
+        model.setSnapshot(service.snapshot())
+        // The translations are searched as well as the keys.
+        model.setSearchQuery("прив")
+        assertEquals(listOf("greeting"), model.keys)
+        model.setSearchQuery("bye")
+        assertEquals(listOf("bye"), model.keys)
+    }
+
+    fun testSearchRespectsTheModuleFilter() {
+        myFixture.addFileToProject(
+            "app/src/main/res/values/strings.xml",
+            "<resources><string name=\"greeting\">Hello</string></resources>",
+        )
+        val service = StringResourceService.getInstance(project)
+        service.refresh()
+        val model = StringsTableModel()
+        model.setSnapshot(service.snapshot())
+        model.setModuleFilter("another-module")
+        model.setSearchQuery("hello")
+        assertEquals(emptyList<String>(), model.keys)
+    }
 }
