@@ -39,6 +39,6 @@
 - MCP tools for AI agents: list keys, list missing translations, list files, get, set, add, remove,
   rename a string and mark it as not translatable
 
-[Unreleased]: https://github.com/yegor/StringManagerPlugin/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/yegor/StringManagerPlugin/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/yegor/StringManagerPlugin/releases/tag/v0.1.0
+[Unreleased]: https://github.com/v1rus-dev/StringManagerPlugin/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/v1rus-dev/StringManagerPlugin/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/v1rus-dev/StringManagerPlugin/releases/tag/v0.1.0

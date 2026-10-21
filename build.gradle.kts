@@ -11,6 +11,9 @@ plugins {
 // -PintellijPlatformTarget=android
 val platformTarget = providers.gradleProperty("intellijPlatformTarget").orElse("idea")
 
+// Имя цели входит в имя архива, иначе сборки для IDEA и для Android Studio затирают друг друга.
+val platformName = if (platformTarget.get() == "android") "android-studio" else "idea"
+
 dependencies {
     testImplementation("junit:junit:4.13.2")
 
@@ -72,4 +75,9 @@ intellijPlatform {
             recommended()
         }
     }
+}
+
+// Архивы для IDEA и для Android Studio имеют разные имена, чтобы не затирать друг друга.
+tasks.named("buildPlugin", Zip::class) {
+    archiveFileName = "StringManagerPlugin-${project.version}-$platformName.zip"
 }

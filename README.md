@@ -49,7 +49,7 @@ The plugin has no dependency on the Android plugin and works in a plain IntelliJ
 
 ### From a release archive
 
-1. Download `StringManagerPlugin-<version>.zip` from the [releases](https://github.com/yegor/StringManagerPlugin/releases).
+1. Download `StringManagerPlugin-<version>.zip` from the [releases](https://github.com/v1rus-dev/StringManagerPlugin/releases).
 2. Open **Settings | Plugins | ⚙ | Install Plugin from Disk…**, choose the archive, and restart the IDE.
 
 The archive built for IntelliJ IDEA works in Android Studio as well. The archive built for Android Studio
