@@ -164,6 +164,23 @@ jvmTarget = if (platformTarget.get() == "android") JvmTarget.JVM_25 else JvmTarg
 
 ---
 
+## Доработки после MVP
+
+- **Переименование ключа** — `StringResourceWriter.renameKey(files, oldKey, newKey)`: меняет атрибут `name`
+  во всех `<string>` с таким именем во всех файлах, где ключ определён, одной командой (undo откатывает всё сразу).
+- **Флаг `translatable` как галочка** — последняя колонка таблицы, рендерится и редактируется чекбоксом;
+  флаг общий для ключа и записывается во все файлы, где ключ есть.
+- **Красная подсветка только для переводимых ключей** — если ключ помечен `translatable="false"`, пустые ячейки
+  переводов не подсвечиваются.
+- **Горизонтальная прокрутка** — `table.autoResizeMode = AUTO_RESIZE_OFF` (иначе `JTable` сжимал колонки
+  под ширину панели и полосы прокрутки не было) + ширина колонки по содержимому, 120…400 px.
+- **Иконка** — `icons/toolWindow.svg` и `icons/toolWindow_dark.svg` (16×16, четыре линии), подключена через
+  `icon="/icons/toolWindow.svg"` в `<toolWindow>`; для Marketplace — `META-INF/pluginIcon.svg` (40×40).
+- **Пункт меню `Tools | String Manager`** — действие `StringManager.Show` с `add-to-group group-id="ToolsMenu"`,
+  оно возвращает tool window, если его случайно скрыли.
+- **Проверки Marketplace**: `verifyPluginConfiguration` и `verifyPluginStructure` — обе проходят;
+  Plugin Verifier — `Compatible` против 261/262/263.
+
 ## Прочие проверенные факты
 
 - `com.intellij.modules.xml` — валидная зависимость (модуль объявлен в `xml/plugin/resources/META-INF/plugin.xml`).

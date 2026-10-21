@@ -83,13 +83,33 @@ class StringManagerToolset : McpToolset {
     }
 
     @McpTool
-    @McpDescription("Marks a string as translatable or not, which sets or removes the attribute translatable=\"false\".")
-    suspend fun mark_translatable(key: String, locale: String, translatable: Boolean): String {
+    @McpDescription("Renames a string in all its translations.")
+    suspend fun rename_string(key: String, new_key: String): String {
         val project = currentCoroutineContext().project
         val service = StringResourceService.getInstance(project)
+        val snapshot = service.scanSnapshot()
+        if (snapshot.entries[key].orEmpty().isEmpty()) {
+            return "String '$key' is not found"
+        }
+        if (snapshot.entries.containsKey(new_key)) {
+            return "String '$new_key' already exists"
+        }
+        service.renameKeyIn(key, new_key)
+        return "String '$key' is renamed to '$new_key' in all its translations"
+    }
+
+    @McpTool
+    @McpDescription("Marks a string as translatable or not, which sets or removes the attribute translatable=\"false\". An empty locale applies the flag to all translations of the key.")
+    suspend fun mark_translatable(key: String, locale: String = "", translatable: Boolean = false): String {
+        val project = currentCoroutineContext().project
+        val service = StringResourceService.getInstance(project)
+        val state = if (translatable) "translatable" else "not translatable"
+        if (locale.isEmpty()) {
+            service.setTranslatableIn(key, translatable)
+            return "String '$key' is marked as $state in all its translations"
+        }
         val (file, virtual) = target(service, locale) ?: return "There is no file for locale '$locale'"
         service.setTranslatableIn(virtual, key, translatable)
-        val state = if (translatable) "translatable" else "not translatable"
         return "String '$key' of locale '$locale' is marked as $state"
     }
 

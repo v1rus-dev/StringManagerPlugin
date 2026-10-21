@@ -18,7 +18,13 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <projectService serviceImplementation="com.yegor.stringmanager.core.StringResourceService"/>
-        <toolWindow id="String Manager" anchor="right" factoryClass="com.yegor.stringmanager.ui.StringManagerToolWindowFactory"/>
+        <toolWindow id="String Manager" anchor="right" icon="/icons/toolWindow.svg" factoryClass="com.yegor.stringmanager.ui.StringManagerToolWindowFactory"/>
         <postStartupActivity implementation="com.yegor.stringmanager.core.StringManagerStartupActivity"/>
     </extensions>
+
+    <actions>
+        <action id="StringManager.Show" class="com.yegor.stringmanager.ui.ShowStringManagerAction">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>

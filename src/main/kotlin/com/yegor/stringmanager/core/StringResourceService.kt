@@ -170,6 +170,37 @@ class StringResourceService(
         refresh()
     }
 
+    /**
+     * Renames a key in all files where it is defined, so that all translations get the new name.
+     */
+    fun renameKey(key: String, newKey: String) {
+        val files = filesOf(key).mapNotNull { fileOf(it.path) }
+        writer.renameKey(files, key, newKey)
+        refresh()
+    }
+
+    /**
+     * Marks a key as translatable or not in all files where it is defined.
+     */
+    fun setTranslatable(key: String, translatable: Boolean) {
+        val files = filesOf(key).mapNotNull { fileOf(it.path) }
+        writer.setTranslatable(files, key, translatable)
+        refresh()
+    }
+
+    /** Renames a key, the write happens on the EDT. */
+    suspend fun renameKeyIn(key: String, newKey: String) {
+        withContext(Dispatchers.EDT) { renameKey(key, newKey) }
+    }
+
+    /** Marks a key as translatable or not, the write happens on the EDT. */
+    suspend fun setTranslatableIn(key: String, translatable: Boolean) {
+        withContext(Dispatchers.EDT) { setTranslatable(key, translatable) }
+    }
+
+    private fun filesOf(key: String): List<StringFile> =
+        snapshot.entries[key].orEmpty().map { it.file }.distinctBy { it.path }
+
     /** Reads the raw value of a string as it is stored in the file. */
     fun readRaw(file: VirtualFile, key: String): String? =
         writer.read(file).firstOrNull { it.first == key }?.second?.value

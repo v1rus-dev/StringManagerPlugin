@@ -6,11 +6,23 @@
 
 ### Added
 
-- Initial version: discovery of Android `res/values*` and Compose Multiplatform `composeResources/values*` files
+- Nothing yet
+
+## [0.1.0] - 2026-10-21
+
+### Added
+
+- Discovery of Android `res/values*` and Compose Multiplatform `composeResources/values*` files in all modules
 - Table of keys and locales with filters by module, file and status
 - Highlighting of missing translations and of `translatable="false"` resources
-- Editing, adding and removing of keys with undo support
-- Live refresh when files change on disk
-- MCP tools for AI agents
+- Editing of a translation right in the table, with undo
+- Renaming of a key in all its translations at once
+- `Translatable` flag of a key as a check box at the end of the table
+- Adding and removing of keys with a choice of the file
+- Live refresh when the files change on disk
+- Tool window action in the `Tools` menu
+- MCP tools for AI agents: list keys, list missing translations, list files, get, set, add, remove,
+  rename a string and mark it as not translatable
 
 [Unreleased]: https://github.com/yegor/StringManagerPlugin/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/yegor/StringManagerPlugin/releases/tag/v0.1.0

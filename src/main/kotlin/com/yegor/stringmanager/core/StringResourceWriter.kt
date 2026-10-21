@@ -92,13 +92,56 @@ class StringResourceWriter(private val project: Project) {
     fun setTranslatable(file: VirtualFile, key: String, translatable: Boolean) {
         write(file, "Change translatable flag of '$key'") {
             val tag = findTag(file, key) ?: return@write false
-            if (translatable) {
-                val attribute = tag.getAttribute(TRANSLATABLE_ATTRIBUTE, null)
-                attribute?.delete()
-            } else {
-                tag.setAttribute(TRANSLATABLE_ATTRIBUTE, "", NON_TRANSLATABLE_VALUE)
-            }
+            applyTranslatable(tag, translatable)
             true
+        }
+    }
+
+    /**
+     * Renames a string in all given files, so that all translations of the key get the new name.
+     *
+     * All files are changed by a single command, therefore the whole renaming is undone at once.
+     */
+    fun renameKey(files: List<VirtualFile>, oldKey: String, newKey: String) {
+        if (oldKey == newKey) {
+            return
+        }
+        WriteCommandAction.runWriteCommandAction(project, "Rename string '$oldKey' to '$newKey'", null, {
+            WriteAction.run<Throwable> {
+                for (file in files) {
+                    val xml = xmlFile(file) ?: continue
+                    val tags = xml.rootTag?.findSubTags(STRING_TAG) ?: continue
+                    for (tag in tags) {
+                        if (tag.getAttributeValue(NAME_ATTRIBUTE, null) == oldKey) {
+                            tag.setAttribute(NAME_ATTRIBUTE, "", newKey)
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    /**
+     * Marks a string as translatable or not in all given files.
+     *
+     * All files are changed by a single command, therefore the whole change is undone at once.
+     */
+    fun setTranslatable(files: List<VirtualFile>, key: String, translatable: Boolean) {
+        WriteCommandAction.runWriteCommandAction(project, "Change translatable flag of '$key'", null, {
+            WriteAction.run<Throwable> {
+                for (file in files) {
+                    val tag = findTag(file, key) ?: continue
+                    applyTranslatable(tag, translatable)
+                }
+            }
+        })
+    }
+
+    private fun applyTranslatable(tag: XmlTag, translatable: Boolean) {
+        if (translatable) {
+            tag.getAttribute(TRANSLATABLE_ATTRIBUTE, null)?.delete()
+        } else {
+            tag.setAttribute(TRANSLATABLE_ATTRIBUTE, "", NON_TRANSLATABLE_VALUE)
         }
     }
 

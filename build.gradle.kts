@@ -42,6 +42,11 @@ intellijPlatform {
         id = "com.yegor.stringmanager"
         name = "String Manager"
         version = project.version.toString()
+        description =
+            "Manages all string resources of a project: Android res/values* and Compose Multiplatform " +
+                "composeResources/values* directories. Shows a table of keys and locales, highlights missing " +
+                "translations and translatable=false resources, allows editing, renaming, adding and removing " +
+                "keys, and exposes the same operations as MCP tools for AI agents."
 
         ideaVersion {
             sinceBuild = "261"
@@ -50,7 +55,15 @@ intellijPlatform {
 
         vendor {
             name = "Yegor"
+            url = "https://github.com/yegor/StringManagerPlugin"
+            email = "YegorCheprasov@gmail.com"
         }
+    }
+
+    // Публикация в JetBrains Marketplace: ./gradlew publishPlugin с переменной окружения PUBLISH_TOKEN.
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+        channels = listOf("default")
     }
 
     pluginVerification {

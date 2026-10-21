@@ -17,6 +17,7 @@ import java.awt.Color
 import java.awt.Component
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JButton
+import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -29,17 +30,29 @@ import javax.swing.table.DefaultTableCellRenderer
 class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()), Disposable {
 
     private val service = StringResourceService.getInstance(project)
-    private val model = StringsTableModel(StringManagerBundle.message("column.key"))
+    private val model = StringsTableModel(
+        StringManagerBundle.message("column.key"),
+        StringManagerBundle.message("column.translatable"),
+    )
     private val table = JBTable(model)
     private val modules = JComboBox<String>()
     private val files = JComboBox<String>()
     private val statuses = JComboBox<String>()
     private val listener: (StringSnapshot) -> Unit = { snapshot -> update(snapshot) }
 
+    /** The table of the panel, it is exposed for the tests. */
+    internal val stringsTable: JBTable get() = table
+
     init {
         model.onEdit = { key, locale, value -> edit(key, locale, value) }
+        model.onRename = { oldKey, newKey -> rename(oldKey, newKey) }
+        model.onTranslatable = { key, translatable -> changeTranslatable(key, translatable) }
         table.setDefaultRenderer(String::class.java, CellRenderer())
+        table.setDefaultRenderer(Boolean::class.java, BooleanRenderer())
+        table.setDefaultEditor(Boolean::class.java, BooleanEditor())
         table.rowHeight = 22
+        // The columns keep their width, so that a project with many locales is scrolled horizontally.
+        table.autoResizeMode = JTable.AUTO_RESIZE_OFF
         statuses.model = DefaultComboBoxModel(
             arrayOf(
                 StringManagerBundle.message("filter.all"),
@@ -99,7 +112,14 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
     private fun update(snapshot: StringSnapshot) {
         refreshFilters(snapshot)
         model.setSnapshot(snapshot)
+        updateColumnWidths()
         table.repaint()
+    }
+
+    private fun updateColumnWidths() {
+        for (column in 0 until table.columnCount) {
+            table.columnModel.getColumn(column).preferredWidth = model.columnWidth(column)
+        }
     }
 
     private fun refreshFilters(snapshot: StringSnapshot) {
@@ -150,6 +170,29 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
         }
         val file = service.fileOf(target.path) ?: return
         service.addString(file, key, value, target.origin)
+    }
+
+    /**
+     * Renames a key in all its translations.
+     */
+    private fun rename(oldKey: String, newKey: String) {
+        val files = service.snapshot().entries[oldKey].orEmpty().map { it.file }.distinctBy { it.path }
+        val answer = Messages.showYesNoDialog(
+            project,
+            StringManagerBundle.message("dialog.rename.message", oldKey, newKey, files.size),
+            StringManagerBundle.message("dialog.rename.title"),
+            Messages.getQuestionIcon(),
+        )
+        if (answer == Messages.YES) {
+            service.renameKey(oldKey, newKey)
+        }
+    }
+
+    /**
+     * Marks a key as translatable or not in all its translations.
+     */
+    private fun changeTranslatable(key: String, translatable: Boolean) {
+        service.setTranslatable(key, translatable)
     }
 
     private fun addKey() {
@@ -212,18 +255,51 @@ class StringManagerPanel(private val project: Project) : JPanel(BorderLayout()),
             column: Int,
         ): Component {
             val component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column) as JLabel
-            val entry: StringEntry? = model.entryAt(row, column)
             if (column == 0) {
                 component.background = table?.background
                 return component
             }
+            val key = model.keyAt(row)
+            val entry: StringEntry? = model.entryAt(row, column)
             component.background = when {
+                // A key that must not be translated is not a missing translation.
+                entry == null && key != null && !model.isTranslatable(key) -> table?.background
                 entry == null -> MISSING_COLOR
                 !entry.translatable -> NON_TRANSLATABLE_COLOR
                 else -> table?.background
             }
             return component
         }
+    }
+
+    /**
+     * Renders the `translatable` flag of a key as a check box.
+     */
+    private inner class BooleanRenderer : DefaultTableCellRenderer() {
+        override fun getTableCellRendererComponent(
+            table: JTable?,
+            value: Any?,
+            isSelected: Boolean,
+            hasFocus: Boolean,
+            row: Int,
+            column: Int,
+        ): Component {
+            val component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
+            val check = component as? JCheckBox ?: JCheckBox()
+            check.text = null
+            check.isSelected = value as? Boolean ?: false
+            check.isOpaque = true
+            check.background = table?.background
+            check.isEnabled = true
+            return check
+        }
+    }
+
+    /**
+     * Edits the `translatable` flag of a key with a check box.
+     */
+    private inner class BooleanEditor : javax.swing.DefaultCellEditor(JCheckBox()) {
+        override fun getCellEditorValue(): Any = (editorComponent as JCheckBox).isSelected
     }
 
     companion object {
