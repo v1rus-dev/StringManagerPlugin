@@ -180,6 +180,8 @@ jvmTarget = if (platformTarget.get() == "android") JvmTarget.JVM_25 else JvmTarg
   оно возвращает tool window, если его случайно скрыли.
 - **Проверки Marketplace**: `verifyPluginConfiguration` и `verifyPluginStructure` — обе проходят;
   Plugin Verifier — `Compatible` против 261/262/263.
+- **Plugin id с дефисом** (`io.github.v1rus-dev.stringmanager`) принят валидатором структуры
+  `verifyPluginStructure` — ограничений на дефис в id нет.
 
 ## Прочие проверенные факты
 
